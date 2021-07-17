@@ -17,7 +17,7 @@ export class WebSocketClient {
             console.log("\x1b[32m",`-----\n\n[${new Date().toISOString()}]: Starting connection with ${this.url}\n\n-----`)
             this.webSocket = new WebSocket(this.url)
             this.webSocket
-                .on('message', this.handleMessageReceiving)
+                .on('message', (data) => this.handleMessageReceiving(data as any))
                 .on('close', this.handleConnectionClosing)
         }
     }
@@ -34,7 +34,23 @@ export class WebSocketClient {
     }
 
     private handleMessageReceiving(data: string) {
-        console.log(`-----\n\n[${new Date().toISOString()}]: Receiving Message: \n ${data}\n\n-----`)
+        if (data.includes('PING')) {
+            this.sendPongSignal()
+            setTimeout(() => {
+                this.sendPingSignal()
+            }, 1000)
+        }
+        if (!data.includes('@badge-info')) {
+            console.log(`-----\n\n[${new Date().toISOString()}]: Receiving Message: \n ${data}\n\n-----`)
+        }
+    }
+
+    private sendPongSignal() {
+        this.sendMessage('PONG')
+    }
+
+    private sendPingSignal() {
+        this.sendMessage('PING')
     }
 
     private handleConnectionClosing() {

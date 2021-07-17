@@ -3,8 +3,9 @@ import { connectOnStreamerChat } from "./connectOnStreamerChat"
 import { WebSocketClient } from "./WebSocketClient"
 
 export const startJob = async () => {
-    const wsClient = new WebSocketClient('wss://irc-ws.chat.twitch.tv/')
     const promises = streamers.map(async (streamer) => {
+        const wsClient = new WebSocketClient('wss://irc-ws.chat.twitch.tv/')
+
         return connectOnStreamerChat({
             streamer,
             ...connectionConfig

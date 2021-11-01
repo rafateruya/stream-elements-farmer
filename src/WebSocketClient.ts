@@ -1,14 +1,20 @@
 import * as WebSocket from 'ws'
+import { sleep } from './sleep'
+const RETRIES_LIMIT = 10
 
 export class WebSocketClient {
     private url: string
     private webSocket?: WebSocket
     private connectionAttempts: number
+    private sentMessages: string[]
+    private pendingMessages: string[]
 
     constructor(url: string) {
         this.url = url
         this.webSocket = undefined
         this.connectionAttempts = 1
+        this.sentMessages = []
+        this.pendingMessages = []
         this.startConnection()
     }
 
@@ -19,6 +25,14 @@ export class WebSocketClient {
             this.webSocket
                 .on('message', (data) => this.handleMessageReceiving(data as any))
                 .on('close', this.handleConnectionClosing)
+                .on('open', async () => {
+                    for (let i = 0; i <= this.pendingMessages.length; i++) {
+                        const pendingMessage = this.pendingMessages[i]
+                        this.sendMessage(pendingMessage)
+                        await sleep(5)
+                    }
+                    this.pendingMessages = []
+                })
         }
     }
 
@@ -28,6 +42,7 @@ export class WebSocketClient {
                 console.log("\x1b[31m",`-----\n\n[${new Date().toISOString()}]: Error when trying to send message: ${error}\n\n-----`)
             } else {
                 console.log("\x1b[45m",`-----\n\n[${new Date().toISOString()}]: Message sent: ${message}\n\n-----`)
+                this.sentMessages.push(message)
             }
 
         })
@@ -54,6 +69,15 @@ export class WebSocketClient {
     }
 
     private handleConnectionClosing() {
-        console.log("\x1b[31m",`-----\n\n[${new Date().toISOString()}]: CONNECTION CLOSED\n\n-----`)
+        if (this.connectionAttempts > RETRIES_LIMIT) {
+            console.log("\x1b[31m",`-----\n\n[${new Date().toISOString()}]: CONNECTION CLOSED ! \n\n-----`)
+            return
+        }
+        console.log("\x1b[31m",`-----\n\n[${new Date().toISOString()}]: CONNECTION CLOSED ! Retrying to connect to server... Attempt ${this.connectionAttempts}/${RETRIES_LIMIT}\n\n-----`)
+        this.connectionAttempts++
+        delete this.webSocket
+        this.pendingMessages = [...this.sentMessages]
+        this.sentMessages = []
+        this.startConnection()
     }
 }

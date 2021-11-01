@@ -26,6 +26,7 @@ export class WebSocketClient {
                 .on('message', (data) => this.handleMessageReceiving(data as any))
                 .on('close', this.handleConnectionClosing)
                 .on('open', async () => {
+                    this.connectionAttempts = 1
                     for (let i = 0; i <= this.pendingMessages.length; i++) {
                         const pendingMessage = this.pendingMessages[i]
                         this.sendMessage(pendingMessage)

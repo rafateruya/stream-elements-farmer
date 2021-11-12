@@ -8,6 +8,7 @@ export class WebSocketClient {
     private connectionAttempts: number
     private sentMessages: string[]
     private pendingMessages: string[]
+    private self = this
 
     constructor(url: string) {
         this.url = url
@@ -21,11 +22,13 @@ export class WebSocketClient {
     private startConnection() {
         if (!this.webSocket) {
             console.log("\x1b[32m",`-----\n\n[${new Date().toISOString()}]: Starting connection with ${this.url}\n\n-----`)
-            this.webSocket = new WebSocket(this.url)
-            this.webSocket
-                .on('message', (data) => this.handleMessageReceiving(data as any))
-                .on('close', this.handleConnectionClosing)
-                .on('open', async () => {
+            try {
+
+                this.webSocket = new WebSocket(this.url)
+                this.webSocket
+                .on('message', ((data: any) => this.handleMessageReceiving(data as any)).bind(this))
+                .on('close', this.handleConnectionClosing.bind(this))
+                .on('open', (async () => {
                     this.connectionAttempts = 1
                     for (let i = 0; i <= this.pendingMessages.length; i++) {
                         const pendingMessage = this.pendingMessages[i]
@@ -33,7 +36,11 @@ export class WebSocketClient {
                         await sleep(5)
                     }
                     this.pendingMessages = []
-                })
+                }).bind(this))
+            } catch (e) {
+                console.log(`Error trying to connect with ${this.url}`)
+                this.handleConnectionClosing()
+            }
         }
     }
 
